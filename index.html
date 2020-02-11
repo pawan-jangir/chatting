@@ -1,0 +1,100 @@
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+<style>
+    .chatbox {
+        margin: 5%;
+        border: 1px solid #ddd;
+        padding: 5%;
+    }
+</style>
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+<script>
+	var socket = io.connect('http://localhost:3000');
+
+	// on connection to server, ask for user's name with an anonymous callback
+	socket.on('connect', function(){
+        // call the server-side function 'adduser' and send one parameter (value of prompt)
+        var person = prompt("Please enter your name");
+        if (person != "") {
+            socket.emit('adduser', person);
+        }else{
+            location.reload(true);
+        }
+		
+	});
+
+	// listener, whenever the server emits 'updatechat', this updates the chat body
+	socket.on('updatechat', function (username, data) {
+		$('#conversation').append('<b>'+username + ':</b> ' + data + '<br>');
+	});
+
+	// listener, whenever the server emits 'updaterooms', this updates the room the client is in
+	socket.on('updaterooms', function(rooms, current_room) {
+		$('#rooms').empty();
+		$.each(rooms, function(key, value) {
+			if(value == current_room){
+				$('#rooms').append('<li>' + value + '</li>');
+			}
+			else {
+				$('#rooms').append('<li><a href="#" onclick="switchRoom(\''+value+'\')">' + value + '</a></li>');
+			}
+		});
+	});
+
+	function switchRoom(room){
+		socket.emit('switchRoom', room);
+	}
+
+	// on load of page
+	$(function(){
+		// when the client clicks SEND
+		$('#datasend').click( function() {
+			var message = $('#data').val();
+            $('#data').val('');
+            if(message == ""){
+                alert("Please enter a message");
+            }else{
+                socket.emit('sendchat', message);
+            }
+		});
+
+		// when the client hits ENTER on their keyboard
+		$('#data').keypress(function(e) {
+			if(e.which == 13) {
+				$(this).blur();
+				$('#datasend').focus().click();
+			}
+        });
+        
+        // Create new chatroom
+		$('#new_room_send').click( function() {
+			var new_chat_room = $('#new_room').val();
+			$('#new_room').val('');
+			socket.emit('createNewRoom', new_chat_room);
+		});
+	});
+
+</script>
+<div class="container">
+    <div class="row chatbox">
+        <div class="col-md-6 col-sm-12">
+            <b>Available Rooms</b>
+            <div >
+                <ul id="rooms">
+
+                </ul>
+            </div>
+            <input id="new_room" class="form-control" />
+            <br>
+            <input type="button" id="new_room_send" class="btn btn-success" value="Create Room" />
+        </div>
+        <div class="col-md-6 col-sm-12">
+            <div id="conversation"></div>
+            <input id="data" class="form-control" />
+            <br/>
+            <input type="button" id="datasend" class="btn btn-info" value="Send Message" />
+        </div>
+    </div>
+</div>
+    
